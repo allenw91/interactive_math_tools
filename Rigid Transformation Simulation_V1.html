@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rigid Transformations Visualizer — 20x20 Grid</title>
+  <!-- Tailwind CSS CDN for visual styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .canvas-container {
+      aspect-ratio: 1 / 1;
+      max-width: 650px;
+      width: 100%;
+    }
+    canvas {
+      touch-action: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col justify-between">
+
+  <!-- Header -->
+  <header class="bg-slate-900 text-white py-4 px-6 shadow-md">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+      <div>
+        <h1 class="text-xl font-bold tracking-wide">Rigid Transformations Sandbox</h1>
+        <p class="text-xs text-slate-400">CCSS 8.G.A.1 & 8.G.A.2 — Translations, Reflections, and Rotations</p>
+      </div>
+      <div class="bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-mono text-slate-300">
+        Grid Bound: [-10, 10]
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Application Body -->
+  <main class="max-w-7xl mx-auto w-full p-4 sm:p-6 flex-grow flex flex-col lg:flex-row gap-6 items-start justify-center">
+
+    <!-- Left Column: Canvas & Coordinate Table -->
+    <div class="w-full lg:w-7/12 flex flex-col items-center gap-4">
+      
+      <!-- High-DPI Interactive Canvas -->
+      <div class="canvas-container relative bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden p-2">
+        <canvas id="gridCanvas" class="w-full h-full block rounded-xl cursor-crosshair"></canvas>
+      </div>
+
+      <!-- Legend Indicator Bar -->
+      <div class="w-full max-w-[650px] flex items-center justify-around bg-white py-3 px-4 rounded-xl border border-slate-200 shadow-sm text-sm">
+        <div class="flex items-center gap-2 font-semibold text-slate-700">
+          <span class="w-4 h-4 rounded bg-blue-600 border border-blue-700 inline-block"></span>
+          <span>Original Image (<span class="text-blue-600">Blue</span>)</span>
+        </div>
+        <div class="flex items-center gap-2 font-semibold text-slate-700">
+          <span class="w-4 h-4 rounded bg-emerald-500 border border-emerald-600 inline-block"></span>
+          <span>Transformed Image (<span class="text-emerald-600">Green</span>)</span>
+        </div>
+      </div>
+
+      <!-- Live Coordinate Mapping Table -->
+      <div class="w-full max-w-[650px] bg-white p-5 rounded-2xl shadow-lg border border-slate-200">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Live Coordinate Tracking Table</h2>
+        
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left text-slate-700">
+            <thead class="text-xs text-slate-500 bg-slate-50 uppercase border-b border-slate-200">
+              <tr>
+                <th scope="col" class="px-3 py-2">Vertex</th>
+                <th scope="col" class="px-3 py-2 text-blue-600">Original Image (x, y)</th>
+                <th scope="col" class="px-3 py-2 text-emerald-600">Transformed Image (x', y')</th>
+              </tr>
+            </thead>
+            <tbody id="coordinateTableBody" class="divide-y divide-slate-100 font-mono text-xs">
+              <!-- Populated dynamically by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Controls Sidebar -->
+    <div class="w-full lg:w-5/12 flex flex-col gap-5">
+
+      <!-- 1. Original Image Shape & Custom Vertex Input Panel -->
+      <div class="bg-white p-5 rounded-2xl shadow-lg border border-slate-200 space-y-4">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <h2 class="text-base font-bold text-slate-900">1. Original Image Setup</h2>
+          <span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded font-medium">Customizable</span>
+        </div>
+
+        <!-- Shape Preset Selector -->
+        <div>
+          <label for="shapePreset" class="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1">Preset Shape Template</label>
+          <select id="shapePreset" class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 font-medium outline-none">
+            <option value="triangle">Right Triangle (3 Vertices)</option>
+            <option value="scalene">Scalene Triangle (3 Vertices)</option>
+            <option value="rectangle">Rectangle (4 Vertices)</option>
+            <option value="lshape">L-Shape Polygon (6 Vertices)</option>
+          </select>
+        </div>
+
+        <!-- Vertex Editors (Dynamic Inputs) -->
+        <div class="space-y-2 pt-1">
+          <label class="text-xs font-bold uppercase tracking-wider text-slate-500 block">Edit Original Vertices (-10 to 10)</label>
+          <div id="vertexInputsContainer" class="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-1">
+            <!-- Dynamic vertex inputs generated here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Transformation Controls -->
+      <div class="bg-white p-5 rounded-2xl shadow-lg border border-slate-200 space-y-5">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <h2 class="text-base font-bold text-slate-900">2. Apply Transformations</h2>
+          <button id="resetBtn" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-1.5 px-3 rounded-lg transition-colors">
+            Reset Shifts
+          </button>
+        </div>
+
+        <!-- Translation Vectors -->
+        <div class="space-y-3">
+          <label class="text-xs font-bold uppercase tracking-wider text-slate-500 block">Translation (Shift)</label>
+          
+          <div>
+            <div class="flex justify-between text-sm font-semibold mb-1">
+              <span>Horizontal Shift (Δx):</span>
+              <span id="dxVal" class="font-mono text-blue-600">0</span>
+            </div>
+            <input type="range" id="dx" min="-10" max="10" step="1" value="0" 
+              class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+          </div>
+
+          <div>
+            <div class="flex justify-between text-sm font-semibold mb-1">
+              <span>Vertical Shift (Δy):</span>
+              <span id="dyVal" class="font-mono text-blue-600">0</span>
+            </div>
+            <input type="range" id="dy" min="-10" max="10" step="1" value="0" 
+              class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+          </div>
+        </div>
+
+        <!-- Reflections -->
+        <div class="space-y-2 border-t border-slate-100 pt-3">
+          <label for="reflection" class="text-xs font-bold uppercase tracking-wider text-slate-500 block">Reflection</label>
+          <select id="reflection" class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 font-medium outline-none">
+            <option value="none">None</option>
+            <option value="x">Reflect across X-axis (y = 0)</option>
+            <option value="y">Reflect across Y-axis (x = 0)</option>
+            <option value="y=x">Reflect across line y = x</option>
+            <option value="y=-x">Reflect across line y = -x</option>
+          </select>
+        </div>
+
+        <!-- Rotations -->
+        <div class="space-y-2 border-t border-slate-100 pt-3">
+          <label for="rotation" class="text-xs font-bold uppercase tracking-wider text-slate-500 block">Rotation (Around Origin 0,0)</label>
+          <select id="rotation" class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 font-medium outline-none">
+            <option value="0">0°</option>
+            <option value="90CCW">90° CCW (Counter-Clockwise)</option>
+            <option value="90CW">90° CW (Clockwise)</option>
+            <option value="180">180°</option>
+            <option value="270CCW">270° CCW (Counter-Clockwise)</option>
+            <option value="270CW">270° CW (Clockwise)</option>
+          </select>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-slate-900 text-slate-400 text-center py-3 text-xs border-t border-slate-800">
+    Interactive Math Visualizer — Rigid Transformations on a Fixed 20x20 Coordinate Plane (8.G.A.1/2)
+  </footer>
+
+  <!-- Application Logic -->
+  <script>
+    // Canvas Context
+    const canvas = document.getElementById('gridCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // UI Elements
+    const shapePreset = document.getElementById('shapePreset');
+    const vertexInputsContainer = document.getElementById('vertexInputsContainer');
+    const dxInput = document.getElementById('dx');
+    const dyInput = document.getElementById('dy');
+    const dxVal = document.getElementById('dxVal');
+    const dyVal = document.getElementById('dyVal');
+    const reflectionSelect = document.getElementById('reflection');
+    const rotationSelect = document.getElementById('rotation');
+    const resetBtn = document.getElementById('resetBtn');
+    const tableBody = document.getElementById('coordinateTableBody');
+
+    // Fixed Grid Range: [-10, 10]
+    const GRID_SIZE = 20;
+
+    // Default Presets for Original Image
+    const PRESETS = {
+      triangle: [
+        { label: 'A', x: -2, y: 1 },
+        { label: 'B', x: -2, y: 5 },
+        { label: 'C', x: -6, y: 1 }
+      ],
+      scalene: [
+        { label: 'A', x: -1, y: 2 },
+        { label: 'B', x: -5, y: 6 },
+        { label: 'C', x: -7, y: 1 }
+      ],
+      rectangle: [
+        { label: 'A', x: -2, y: 2 },
+        { label: 'B', x: -2, y: 6 },
+        { label: 'C', x: -7, y: 6 },
+        { label: 'D', x: -7, y: 2 }
+      ],
+      lshape: [
+        { label: 'A', x: -1, y: 1 },
+        { label: 'B', x: -1, y: 7 },
+        { label: 'C', x: -3, y: 7 },
+        { label: 'D', x: -3, y: 3 },
+        { label: 'E', x: -5, y: 3 },
+        { label: 'F', x: -5, y: 1 }
+      ]
+    };
+
+    // Active State for Original Image Vertices
+    let originalVertices = JSON.parse(JSON.stringify(PRESETS.triangle));
+
+    // Handle High-DPI Resolution
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      
+      ctx.scale(dpr, dpr);
+      render();
+    }
+
+    // Convert Math Coordinates (-10 to 10) to Screen Pixels
+    function mathToPixel(x, y) {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
+      const step = width / GRID_SIZE;
+
+      return {
+        px: (width / 2) + (x * step),
+        py: (height / 2) - (y * step)
+      };
+    }
+
+    // Render Editable Input Controls for Active Vertices
+    function populateVertexInputs() {
+      vertexInputsContainer.innerHTML = '';
+
+      originalVertices.forEach((v, idx) => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200 text-xs font-semibold';
+
+        row.innerHTML = `
+          <span class="w-6 text-blue-600 font-bold">${v.label}:</span>
+          <div class="flex items-center gap-1">
+            <span class="text-slate-400">X =</span>
+            <input type="number" min="-10" max="10" value="${v.x}" data-idx="${idx}" data-axis="x"
+              class="v-input w-14 bg-white border border-slate-300 rounded px-1 py-0.5 font-mono text-center focus:ring-1 focus:ring-blue-500 outline-none">
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="text-slate-400">Y =</span>
+            <input type="number" min="-10" max="10" value="${v.y}" data-idx="${idx}" data-axis="y"
+              class="v-input w-14 bg-white border border-slate-300 rounded px-1 py-0.5 font-mono text-center focus:ring-1 focus:ring-blue-500 outline-none">
+          </div>
+        `;
+
+        vertexInputsContainer.appendChild(row);
+      });
+
+      // Attach event handlers to numeric inputs
+      document.querySelectorAll('.v-input').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const idx = parseInt(e.target.dataset.idx, 10);
+          const axis = e.target.dataset.axis;
+          let val = parseInt(e.target.value, 10);
+
+          // Bounds enforcement [-10, 10]
+          if (isNaN(val)) val = 0;
+          if (val > 10) val = 10;
+          if (val < -10) val = -10;
+
+          originalVertices[idx][axis] = val;
+          render();
+        });
+      });
+    }
+
+    // Transformation Logic (Translation -> Reflection -> Rotation)
+    function transformPoint(p) {
+      let x = p.x;
+      let y = p.y;
+
+      // 1. Translation
+      const dx = parseInt(dxInput.value, 10);
+      const dy = parseInt(dyInput.value, 10);
+      x += dx;
+      y += dy;
+
+      // 2. Reflection
+      const ref = reflectionSelect.value;
+      if (ref === 'x') {
+        y = -y;
+      } else if (ref === 'y') {
+        x = -x;
+      } else if (ref === 'y=x') {
+        const temp = x;
+        x = y;
+        y = temp;
+      } else if (ref === 'y=-x') {
+        const temp = x;
+        x = -y;
+        y = -temp;
+      }
+
+      // 3. Rotation around (0,0)
+      const rot = rotationSelect.value;
+      let rx = x;
+      let ry = y;
+
+      if (rot === '90CCW' || rot === '270CW') {
+        rx = -y;
+        ry = x;
+      } else if (rot === '90CW' || rot === '270CCW') {
+        rx = y;
+        ry = -x;
+      } else if (rot === '180') {
+        rx = -x;
+        ry = -y;
+      }
+
+      return { x: rx, y: ry, label: p.label + "'" };
+    }
+
+    // Render Canvas Scene
+    function render() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
+
+      // Clear Canvas
+      ctx.clearRect(0, 0, width, height);
+
+      // Draw Grid & Axes
+      drawGrid(width, height);
+
+      // Draw Guide Line for active reflection
+      drawReflectionLine(width, height);
+
+      // 1. Draw Original Image (Blue)
+      drawPolygon(originalVertices, '#2563eb', 'rgba(37, 99, 235, 0.18)', 'Original');
+
+      // 2. Compute Transformed Vertices
+      const transformedVertices = originalVertices.map(transformPoint);
+
+      // 3. Draw Transformed Image (Green)
+      drawPolygon(transformedVertices, '#10b981', 'rgba(16, 185, 129, 0.22)', 'Transformed');
+
+      // Update Mapping Table
+      updateTable(transformedVertices);
+    }
+
+    // Grid & Axis Drawing
+    function drawGrid(w, h) {
+      const step = w / GRID_SIZE;
+      const originX = w / 2;
+      const originY = h / 2;
+
+      ctx.lineWidth = 1;
+
+      // Integer grid lines
+      ctx.strokeStyle = '#cbd5e1';
+      for (let i = -10; i <= 10; i++) {
+        const { px, py } = mathToPixel(i, i);
+
+        ctx.beginPath();
+        ctx.moveTo(px, 0); ctx.lineTo(px, h);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(0, py); ctx.lineTo(w, py);
+        ctx.stroke();
+      }
+
+      // X and Y Axes
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 2.5;
+
+      ctx.beginPath();
+      ctx.moveTo(0, originY); ctx.lineTo(w, originY);
+      ctx.moveTo(originX, 0); ctx.lineTo(originX, h);
+      ctx.stroke();
+
+      // Numbers & Axis Labels
+      ctx.fillStyle = '#475569';
+      ctx.font = '600 11px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      for (let i = -10; i <= 10; i++) {
+        if (i === 0) continue;
+        const { px, py } = mathToPixel(i, i);
+
+        ctx.fillText(i.toString(), px, originY + 14);
+        ctx.fillText(i.toString(), originX - 14, py);
+      }
+
+      ctx.fillText('0', originX - 10, originY + 12);
+
+      ctx.font = 'bold 12px system-ui, sans-serif';
+      ctx.fillStyle = '#0f172a';
+      ctx.fillText('X', w - 12, originY - 14);
+      ctx.fillText('Y', originX + 14, 12);
+    }
+
+    // Draw active reflection guides
+    function drawReflectionLine(w, h) {
+      const ref = reflectionSelect.value;
+      if (ref === 'none' || ref === 'x' || ref === 'y') return;
+
+      ctx.save();
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 6]);
+
+      ctx.beginPath();
+      if (ref === 'y=x') {
+        const p1 = mathToPixel(-10, -10);
+        const p2 = mathToPixel(10, 10);
+        ctx.moveTo(p1.px, p1.py);
+        ctx.lineTo(p2.px, p2.py);
+      } else if (ref === 'y=-x') {
+        const p1 = mathToPixel(-10, 10);
+        const p2 = mathToPixel(10, -10);
+        ctx.moveTo(p1.px, p1.py);
+        ctx.lineTo(p2.px, p2.py);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Render Polygon & Vertices
+    function drawPolygon(points, strokeColor, fillColor, type) {
+      ctx.beginPath();
+      points.forEach((p, idx) => {
+        const { px, py } = mathToPixel(p.x, p.y);
+        if (idx === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.closePath();
+
+      ctx.fillStyle = fillColor;
+      ctx.fill();
+
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Render Vertex Callouts
+      points.forEach((p) => {
+        const { px, py } = mathToPixel(p.x, p.y);
+
+        ctx.beginPath();
+        ctx.arc(px, py, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = strokeColor;
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.font = 'bold 12px system-ui, sans-serif';
+        ctx.fillStyle = strokeColor;
+        
+        const coordText = `${p.label}(${p.x}, ${p.y})`;
+        const offsetX = p.x >= 0 ? 8 : -8;
+        const offsetY = p.y >= 0 ? -10 : 14;
+
+        ctx.textAlign = p.x >= 0 ? 'left' : 'right';
+        ctx.fillText(coordText, px + offsetX, py + offsetY);
+      });
+    }
+
+    // Populate Real-Time Tracking Table
+    function updateTable(transformedVertices) {
+      tableBody.innerHTML = '';
+
+      originalVertices.forEach((orig, idx) => {
+        const trans = transformedVertices[idx];
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-slate-50 transition-colors';
+
+        row.innerHTML = `
+          <td class="px-3 py-2 font-bold text-slate-800">${orig.label} → ${trans.label}</td>
+          <td class="px-3 py-2 font-mono text-blue-600 font-semibold">(${orig.x}, ${orig.y})</td>
+          <td class="px-3 py-2 font-mono text-emerald-600 font-semibold">(${trans.x}, ${trans.y})</td>
+        `;
+
+        tableBody.appendChild(row);
+      });
+    }
+
+    // Listeners for Transformations & Inputs
+    dxInput.addEventListener('input', (e) => {
+      dxVal.textContent = e.target.value;
+      render();
+    });
+
+    dyInput.addEventListener('input', (e) => {
+      dyVal.textContent = e.target.value;
+      render();
+    });
+
+    reflectionSelect.addEventListener('change', render);
+    rotationSelect.addEventListener('change', render);
+
+    shapePreset.addEventListener('change', (e) => {
+      const selectedKey = e.target.value;
+      originalVertices = JSON.parse(JSON.stringify(PRESETS[selectedKey]));
+      populateVertexInputs();
+      render();
+    });
+
+    resetBtn.addEventListener('click', () => {
+      dxInput.value = 0;
+      dyInput.value = 0;
+      dxVal.textContent = '0';
+      dyVal.textContent = '0';
+      reflectionSelect.value = 'none';
+      rotationSelect.value = '0';
+      render();
+    });
+
+    window.addEventListener('resize', resizeCanvas);
+
+    // Initial Execution
+    window.onload = () => {
+      populateVertexInputs();
+      resizeCanvas();
+    };
+  </script>
+</body>
+</html>
