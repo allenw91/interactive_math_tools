@@ -54,7 +54,7 @@
         </div>
         <div class="flex items-center gap-2 font-semibold text-slate-700">
           <span class="w-4 h-4 rounded bg-emerald-500 border border-emerald-600 inline-block"></span>
-          <span>Transformed Image (<span class="text-emerald-600">Green</span>)</span>
+          <span>Image(<span class="text-emerald-600">Green</span>)</span>
         </div>
       </div>
 
@@ -67,8 +67,8 @@
             <thead class="text-xs text-slate-500 bg-slate-50 uppercase border-b border-slate-200">
               <tr>
                 <th scope="col" class="px-3 py-2">Vertex</th>
-                <th scope="col" class="px-3 py-2 text-blue-600">Original Image (x, y)</th>
-                <th scope="col" class="px-3 py-2 text-emerald-600">Transformed Image (x', y')</th>
+                <th scope="col" class="px-3 py-2 text-blue-600">Original Figure (x, y)</th>
+                <th scope="col" class="px-3 py-2 text-emerald-600">Image (x', y')</th>
               </tr>
             </thead>
             <tbody id="coordinateTableBody" class="divide-y divide-slate-100 font-mono text-xs">
@@ -197,7 +197,7 @@
     // Fixed Grid Range: [-10, 10]
     const GRID_SIZE = 20;
 
-    // Default Presets for Original Image
+    // Default Presets for Original Figure
     const PRESETS = {
       triangle: [
         { label: 'A', x: -8, y: 4 },
